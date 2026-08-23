@@ -3,6 +3,7 @@
     "name": "on-the-go",
     "slug": "on-the-go",
     "version": "1.0.0",
+    "scheme": "onthego",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -33,6 +34,9 @@
         "projectId": "622d1fef-fdcf-433a-8759-f2a0ba5e69fb"
       }
     },
-    "owner": "chansencodes-team"
+    "owner": "chansencodes-team",
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
