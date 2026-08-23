@@ -6,8 +6,8 @@ export default function App() {
     <View style={styles.container}>
       <Text style={styles.title}>On The Go</Text>
       <Text style={styles.subtitle}>
-        If you can read this on your phone, the live-reload loop works. Edit
-        App.tsx and watch this screen update.
+        Hello from Claude! This screen was edited in chat and pushed with
+        `eas update` — no rebuild, no computer, just close and reopen the app.
       </Text>
       <StatusBar style="auto" />
     </View>
