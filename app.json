@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.chansencode.onthego",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +21,18 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/622d1fef-fdcf-433a-8759-f2a0ba5e69fb"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "622d1fef-fdcf-433a-8759-f2a0ba5e69fb"
+      }
+    },
+    "owner": "chansencodes-team"
   }
 }
