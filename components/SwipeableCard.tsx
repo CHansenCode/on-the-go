@@ -17,7 +17,8 @@ export default function SwipeableCard({ prompt, answer, revealed, onReveal, onSw
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => revealed,
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: Animated.event([null, { dx: position.x, dy: position.y }], {
         useNativeDriver: false,
       }),
@@ -67,7 +68,7 @@ export default function SwipeableCard({ prompt, answer, revealed, onReveal, onSw
 
   return (
     <Animated.View
-      {...panResponder.panHandlers}
+      {...(revealed ? panResponder.panHandlers : {})}
       style={[
         styles.card,
         {
