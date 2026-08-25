@@ -6,6 +6,8 @@
 export type Card = {
   id: string;
   name: string;
+  group: string; // category — the Learning tab's category list is derived
+  // from the distinct values here, same idea as `SELECT DISTINCT group`.
   languageOne: string;
   languageTwo: string;
   timesCompleted: number;
@@ -14,6 +16,8 @@ export type Card = {
 
 export const languageOneLabel = 'Swedish';
 export const languageTwoLabel = 'Lithuanian';
+
+const GROUP = 'Swedish ↔ Lithuanian';
 
 // English gloss -> [Swedish, Lithuanian]
 const pairs: [string, string, string][] = [
@@ -122,8 +126,15 @@ const pairs: [string, string, string][] = [
 export const initialCards: Card[] = pairs.map(([name, languageOne, languageTwo], i) => ({
   id: String(i + 1),
   name,
+  group: GROUP,
   languageOne,
   languageTwo,
   timesCompleted: 0,
   lastCompleted: null,
 }));
+
+// Distinct groups, in the order they first appear — the category list on
+// the Learning tab's selection screen.
+export function listGroups(cards: Card[]): string[] {
+  return [...new Set(cards.map((c) => c.group))];
+}

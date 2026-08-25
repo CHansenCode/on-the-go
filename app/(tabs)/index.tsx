@@ -1,78 +1,124 @@
-import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import SwipeableCard from '../../components/SwipeableCard';
-import { Card, initialCards, languageOneLabel, languageTwoLabel } from '../../data/flashcards';
+import FlashcardSession from '../../components/FlashcardSession';
+import { initialCards, languageOneLabel, languageTwoLabel, listGroups } from '../../data/flashcards';
 import { useTheme } from '../../lib/theme';
 
-// Which language is shown as the prompt for a freshly-drawn card. Picked
-// once per card draw so both directions get practiced.
-function randomSide(): 'one' | 'two' {
-  return Math.random() < 0.5 ? 'one' : 'two';
-}
+const COUNT_STEP = 10;
+const DEFAULT_COUNT = 50;
+
+type Selection = { group: string; count: number } | null;
 
 export default function LearningScreen() {
-  const { colors } = useTheme();
+  const [group, setGroup] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Selection>(null);
 
-  // In-memory only — this resets on every reload. There's no db yet, and
-  // no logic yet for how often a card comes up or when it gets archived;
-  // for now every card is equally likely, in a fixed order.
-  const [cards, setCards] = useState<Card[]>(initialCards);
-  const [index, setIndex] = useState(0);
-  const [side, setSide] = useState<'one' | 'two'>(randomSide());
-  const [revealed, setRevealed] = useState(false);
-
-  const card = cards[index % cards.length];
-
-  const { prompt, answer } = useMemo(() => {
-    if (side === 'one') {
-      return { prompt: card.languageOne, answer: card.languageTwo };
-    }
-    return { prompt: card.languageTwo, answer: card.languageOne };
-  }, [card, side]);
-
-  const advance = () => {
-    setIndex((i) => i + 1);
-    setSide(randomSide());
-    setRevealed(false);
-  };
-
-  const handleSwipe = (direction: 'left' | 'right') => {
-    const correct = direction === 'right';
-    setCards((prev) =>
-      prev.map((c) =>
-        c.id === card.id
-          ? {
-              ...c,
-              timesCompleted: correct ? c.timesCompleted + 1 : c.timesCompleted,
-              lastCompleted: correct ? new Date().toISOString() : c.lastCompleted,
-            }
-          : c
-      )
+  if (selection) {
+    const deck = initialCards.filter((c) => c.group === selection.group).slice(0, selection.count);
+    return (
+      <FlashcardSession
+        key={`${selection.group}-${selection.count}`}
+        cards={deck}
+        languageOneLabel={languageOneLabel}
+        languageTwoLabel={languageTwoLabel}
+        onExit={() => {
+          setSelection(null);
+          setGroup(null);
+        }}
+      />
     );
-    advance();
-  };
+  }
+
+  if (group) {
+    return (
+      <CountStep
+        group={group}
+        onBack={() => setGroup(null)}
+        onStart={(count) => setSelection({ group, count })}
+      />
+    );
+  }
+
+  return <CategoryStep onSelect={setGroup} />;
+}
+
+function CategoryStep({ onSelect }: { onSelect: (group: string) => void }) {
+  const { colors } = useTheme();
+  // select group from dummydata group by group
+  const groups = listGroups(initialCards);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.header, { color: colors.textMuted }]}>
-        {side === 'one' ? languageOneLabel : languageTwoLabel} → {side === 'one' ? languageTwoLabel : languageOneLabel}
-      </Text>
+      <Text style={[styles.title, { color: colors.text }]}>Choose a category</Text>
+      <View style={styles.optionList}>
+        {groups.map((g) => (
+          <Pressable
+            key={g}
+            style={[styles.optionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => onSelect(g)}
+          >
+            <Text style={[styles.optionText, { color: colors.text }]}>{g}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
 
-      <View style={styles.cardArea}>
-        <SwipeableCard
-          key={card.id}
-          prompt={prompt}
-          answer={answer}
-          revealed={revealed}
-          onReveal={() => setRevealed(true)}
-          onSwipe={handleSwipe}
-        />
+function CountStep({
+  group,
+  onBack,
+  onStart,
+}: {
+  group: string;
+  onBack: () => void;
+  onStart: (count: number) => void;
+}) {
+  const { colors } = useTheme();
+  const available = initialCards.filter((c) => c.group === group).length;
+  const min = Math.min(COUNT_STEP, available);
+  const max = available;
+  const clamp = (n: number) => Math.max(min, Math.min(max, n));
+
+  const [count, setCount] = useState(() => clamp(DEFAULT_COUNT));
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Pressable style={styles.backButton} onPress={onBack}>
+        <Text style={[styles.backButtonText, { color: colors.accent }]}>← Back</Text>
+      </Pressable>
+
+      <Text style={[styles.title, { color: colors.text }]}>How many words?</Text>
+      <Text style={[styles.subtitle, { color: colors.textMuted }]}>{group}</Text>
+
+      <View style={styles.counterRow}>
+        <Pressable
+          style={[styles.counterButton, { borderColor: colors.border }]}
+          onPress={() => setCount((c) => clamp(c - COUNT_STEP))}
+          disabled={count <= min}
+        >
+          <Text style={[styles.counterButtonText, { color: count <= min ? colors.textMuted : colors.text }]}>
+            −10
+          </Text>
+        </Pressable>
+
+        <Text style={[styles.countValue, { color: colors.text }]}>{count}</Text>
+
+        <Pressable
+          style={[styles.counterButton, { borderColor: colors.border }]}
+          onPress={() => setCount((c) => clamp(c + COUNT_STEP))}
+          disabled={count >= max}
+        >
+          <Text style={[styles.counterButtonText, { color: count >= max ? colors.textMuted : colors.text }]}>
+            +10
+          </Text>
+        </Pressable>
       </View>
 
-      <Text style={[styles.progress, { color: colors.textMuted }]}>
-        {card.name} · completed {card.timesCompleted}×
-      </Text>
+      <Pressable style={[styles.startButton, { backgroundColor: colors.accent }]} onPress={() => onStart(count)}>
+        <Text style={[styles.startButtonText, { color: colors.onAccent }]}>Start</Text>
+      </Pressable>
     </View>
   );
 }
@@ -85,17 +131,67 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
-  header: {
+  backButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+  },
+  backButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
-  cardArea: {
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  subtitle: {
+    fontSize: 15,
+  },
+  optionList: {
     width: '100%',
-    alignItems: 'center',
+    gap: 12,
   },
-  progress: {
-    fontSize: 14,
+  optionRow: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  optionText: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  counterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  counterButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  countValue: {
+    fontSize: 36,
+    fontWeight: '700',
+    minWidth: 64,
+    textAlign: 'center',
+  },
+  startButton: {
+    marginTop: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+  },
+  startButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
   },
 });
