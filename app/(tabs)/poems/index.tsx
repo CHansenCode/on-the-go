@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Directory } from 'expo-file-system';
 
+import { AddIcon, FolderIcon } from '../../../components/icons';
 import { createFolder, listFolders } from '../../../lib/poems';
 import { useTheme } from '../../../lib/theme';
 
@@ -40,7 +40,7 @@ export default function PoemsFolderListScreen() {
           returnKeyType="done"
         />
         <Pressable style={[styles.addButton, { backgroundColor: colors.accent }]} onPress={handleCreateFolder}>
-          <Ionicons name="add" size={24} color={colors.onAccent} />
+          <AddIcon size={22} color={colors.onAccent} />
         </Pressable>
       </View>
 
@@ -56,7 +56,7 @@ export default function PoemsFolderListScreen() {
             style={[styles.folderRow, { borderBottomColor: colors.border }]}
             onPress={() => router.push(`/poems/${encodeURIComponent(item.name)}`)}
           >
-            <Ionicons name="folder-outline" size={22} color={colors.accent} />
+            <FolderIcon size={22} color={colors.accent} />
             <Text style={[styles.folderName, { color: colors.text }]}>{item.name}</Text>
           </Pressable>
         )}

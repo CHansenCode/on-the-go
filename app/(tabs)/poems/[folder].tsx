@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -13,6 +12,7 @@ import {
 } from 'expo-audio';
 import { File } from 'expo-file-system';
 
+import { MicIcon, PauseIcon, PlayIcon, StopIcon } from '../../../components/icons';
 import { getFolder, listRecordings, saveRecording, type Recording } from '../../../lib/poems';
 import { useTheme } from '../../../lib/theme';
 
@@ -129,11 +129,11 @@ export default function FolderScreen() {
               style={[styles.recordingRow, { borderBottomColor: colors.border }]}
               onPress={() => togglePlay(item)}
             >
-              <Ionicons
-                name={isPlaying ? 'pause-circle' : 'play-circle'}
-                size={34}
-                color={colors.accent}
-              />
+              {isPlaying ? (
+                <PauseIcon size={22} color={colors.accent} />
+              ) : (
+                <PlayIcon size={22} color={colors.accent} />
+              )}
               <Text style={[styles.recordingName, { color: colors.text }]}>{item.name}</Text>
               <Text style={[styles.recordingDate, { color: colors.textMuted }]}>{formatDate(item.createdAt)}</Text>
             </Pressable>
@@ -154,11 +154,11 @@ export default function FolderScreen() {
           ]}
           onPress={recorderState.isRecording ? stopRecording : startRecording}
         >
-          <Ionicons
-            name={recorderState.isRecording ? 'stop' : 'mic'}
-            size={30}
-            color={recorderState.isRecording ? colors.background : colors.onAccent}
-          />
+          {recorderState.isRecording ? (
+            <StopIcon size={26} color={colors.background} />
+          ) : (
+            <MicIcon size={26} color={colors.onAccent} />
+          )}
         </Pressable>
       </View>
 
