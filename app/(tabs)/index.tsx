@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import SwipeableCard from '../../components/SwipeableCard';
@@ -72,17 +72,6 @@ export default function LearningScreen() {
         {card.name} · completed {card.timesCompleted}×
       </Text>
 
-      {revealed && (
-        <View style={styles.buttonRow}>
-          <Pressable style={[styles.button, styles.incorrectButton]} onPress={() => handleSwipe('left')}>
-            <Text style={styles.buttonText}>✗ Incorrect</Text>
-          </Pressable>
-          <Pressable style={[styles.button, styles.correctButton]} onPress={() => handleSwipe('right')}>
-            <Text style={styles.buttonText}>✓ Correct</Text>
-          </Pressable>
-        </View>
-      )}
-
       <StatusBar style="auto" />
     </View>
   );
@@ -111,24 +100,5 @@ const styles = StyleSheet.create({
   progress: {
     fontSize: 14,
     color: '#999',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  button: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  incorrectButton: {
-    backgroundColor: '#fde2e2',
-  },
-  correctButton: {
-    backgroundColor: '#ddf3e4',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
