@@ -1,8 +1,8 @@
-# On The Go
+# Drembmon
 
-An Android app, purpose TBD. Built with [Expo](https://expo.dev) + React
-Native + TypeScript, developed entirely through chat with Claude — no
-computer required.
+An Android app for sharing poems, plus a language-learning flashcard tab.
+Built with [Expo](https://expo.dev) + React Native + TypeScript, developed
+entirely through chat with Claude — no computer required.
 
 ## How this app gets built
 
@@ -16,16 +16,21 @@ There's no computer running a local dev server for this project. Instead:
    picks up the change in seconds — no rebuild, no reinstall.
 3. A new **EAS Build** (and reinstall) is only needed again if something
    native changes — a new native module/dependency, an Expo SDK upgrade, or
-   native config like permissions or the app icon.
+   native config like permissions, the app name, or the app icon.
 
 ## Project structure
 
 Routing is file-based via [Expo Router](https://docs.expo.dev/router/introduction/):
 
-- `app/_layout.tsx` — root layout.
+- `app/_layout.tsx` — root layout, wraps everything in the theme provider.
 - `app/(tabs)/_layout.tsx` — the bottom tab bar.
-- `app/(tabs)/index.tsx` — the **Learning** tab.
+- `app/(tabs)/index.tsx` — the **Learning** tab (flashcards).
+- `app/(tabs)/poems/` — the **Poems** tab: record audio into local folders.
 - `app/(tabs)/status.tsx` — the **Status** tab.
+- `app/(tabs)/settings.tsx` — the **Settings** tab (dark mode toggle).
+- `lib/theme.tsx` — color palette + light/dark mode state.
+- `lib/poems.ts` — folder/recording filesystem helpers (no database yet).
+- `components/icons.tsx` — the app's custom mono-color SVG icon set.
 - `app.json` — Expo app config (name, icon, Android/iOS settings, EAS
   project id, OTA update URL).
 - `eas.json` — EAS Build profiles (`preview` for the sideloaded APK,
