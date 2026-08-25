@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
 
+import { useTheme } from '../lib/theme';
+
 const SWIPE_THRESHOLD = 120;
 const ROTATION_RANGE = 12; // degrees, at max drag
 
@@ -13,6 +15,7 @@ type Props = {
 };
 
 export default function SwipeableCard({ prompt, answer, revealed, onReveal, onSwipe }: Props) {
+  const { colors } = useTheme();
   const position = useRef(new Animated.ValueXY()).current;
 
   const panResponder = useRef(
@@ -71,24 +74,27 @@ export default function SwipeableCard({ prompt, answer, revealed, onReveal, onSw
       {...(revealed ? panResponder.panHandlers : {})}
       style={[
         styles.card,
+        { backgroundColor: colors.surface },
         {
           transform: [{ translateX: position.x }, { translateY: position.y }, { rotate }],
         },
       ]}
     >
-      <Animated.View style={[styles.badge, styles.incorrectBadge, { opacity: incorrectOpacity }]}>
-        <Text style={styles.badgeText}>INCORRECT</Text>
+      {/* Incorrect stays monochrome (primary) rather than a fourth color —
+          correct is the only thing that gets the accent treatment. */}
+      <Animated.View style={[styles.badge, { borderColor: colors.text, opacity: incorrectOpacity }]}>
+        <Text style={[styles.badgeText, { color: colors.text }]}>INCORRECT</Text>
       </Animated.View>
-      <Animated.View style={[styles.badge, styles.correctBadge, { opacity: correctOpacity }]}>
-        <Text style={styles.badgeText}>CORRECT</Text>
+      <Animated.View style={[styles.badge, styles.correctBadge, { borderColor: colors.accent, opacity: correctOpacity }]}>
+        <Text style={[styles.badgeText, { color: colors.accent }]}>CORRECT</Text>
       </Animated.View>
 
       <View style={styles.content} onTouchEnd={revealed ? undefined : onReveal}>
-        <Text style={styles.prompt}>{prompt}</Text>
+        <Text style={[styles.prompt, { color: colors.text }]}>{prompt}</Text>
         {revealed ? (
-          <Text style={styles.answer}>{answer}</Text>
+          <Text style={[styles.answer, { color: colors.accent }]}>{answer}</Text>
         ) : (
-          <Text style={styles.hint}>Tap to reveal</Text>
+          <Text style={[styles.hint, { color: colors.textMuted }]}>Tap to reveal</Text>
         )}
       </View>
     </Animated.View>
@@ -100,7 +106,6 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 3 / 4,
     maxHeight: 420,
-    backgroundColor: '#fff',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
@@ -125,31 +130,26 @@ const styles = StyleSheet.create({
   },
   answer: {
     fontSize: 24,
-    color: '#2f6fed',
     fontWeight: '600',
     textAlign: 'center',
   },
   hint: {
     fontSize: 14,
-    color: '#999',
   },
   badge: {
     position: 'absolute',
     top: 24,
+    left: 24,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 3,
     zIndex: 10,
-  },
-  incorrectBadge: {
-    left: 24,
-    borderColor: '#e5484d',
     transform: [{ rotate: '-15deg' }],
   },
   correctBadge: {
+    left: undefined,
     right: 24,
-    borderColor: '#30a46c',
     transform: [{ rotate: '15deg' }],
   },
   badgeText: {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -13,6 +14,7 @@ import {
 import { File } from 'expo-file-system';
 
 import { getFolder, listRecordings, saveRecording, type Recording } from '../../../lib/poems';
+import { useTheme } from '../../../lib/theme';
 
 function formatDuration(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -27,6 +29,7 @@ function formatDate(date: Date | null) {
 }
 
 export default function FolderScreen() {
+  const { colors } = useTheme();
   const { folder: folderParam } = useLocalSearchParams<{ folder: string }>();
   const folderName = decodeURIComponent(folderParam ?? '');
   const folder = getFolder(folderName);
@@ -108,7 +111,7 @@ export default function FolderScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ title: folderName }} />
 
       <FlatList
@@ -116,50 +119,72 @@ export default function FolderScreen() {
         data={recordings}
         keyExtractor={(item) => item.file.uri}
         contentContainerStyle={recordings.length === 0 ? styles.emptyContainer : undefined}
-        ListEmptyComponent={<Text style={styles.emptyText}>No poems recorded here yet.</Text>}
+        ListEmptyComponent={
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>No poems recorded here yet.</Text>
+        }
         renderItem={({ item }) => {
           const isPlaying = playingUri === item.file.uri && playerStatus.playing;
           return (
-            <Pressable style={styles.recordingRow} onPress={() => togglePlay(item)}>
-              <Text style={styles.playIcon}>{isPlaying ? '⏸' : '▶️'}</Text>
-              <Text style={styles.recordingName}>{item.name}</Text>
-              <Text style={styles.recordingDate}>{formatDate(item.createdAt)}</Text>
+            <Pressable
+              style={[styles.recordingRow, { borderBottomColor: colors.border }]}
+              onPress={() => togglePlay(item)}
+            >
+              <Ionicons
+                name={isPlaying ? 'pause-circle' : 'play-circle'}
+                size={34}
+                color={colors.accent}
+              />
+              <Text style={[styles.recordingName, { color: colors.text }]}>{item.name}</Text>
+              <Text style={[styles.recordingDate, { color: colors.textMuted }]}>{formatDate(item.createdAt)}</Text>
             </Pressable>
           );
         }}
       />
 
-      <View style={styles.recordArea}>
+      <View style={[styles.recordArea, { borderTopColor: colors.border }]}>
         {recorderState.isRecording && (
-          <Text style={styles.timer}>{formatDuration(recorderState.durationMillis)}</Text>
+          <Text style={[styles.timer, { color: colors.textMuted }]}>
+            {formatDuration(recorderState.durationMillis)}
+          </Text>
         )}
         <Pressable
-          style={[styles.recordButton, recorderState.isRecording && styles.recordButtonActive]}
+          style={[
+            styles.recordButton,
+            { backgroundColor: recorderState.isRecording ? colors.text : colors.accent },
+          ]}
           onPress={recorderState.isRecording ? stopRecording : startRecording}
         >
-          <Text style={styles.recordButtonText}>{recorderState.isRecording ? '■' : '●'}</Text>
+          <Ionicons
+            name={recorderState.isRecording ? 'stop' : 'mic'}
+            size={30}
+            color={recorderState.isRecording ? colors.background : colors.onAccent}
+          />
         </Pressable>
       </View>
 
       <Modal visible={pendingUri !== null} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Name this poem</Text>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Name this poem</Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { borderColor: colors.border, color: colors.text }]}
               value={nameInput}
               onChangeText={setNameInput}
               placeholder="e.g. Ode to Tuesday"
+              placeholderTextColor={colors.textMuted}
               autoFocus
               onSubmitEditing={confirmSave}
               returnKeyType="done"
             />
             <View style={styles.modalButtons}>
               <Pressable style={styles.modalButton} onPress={discardRecording}>
-                <Text style={styles.modalButtonText}>Discard</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textMuted }]}>Discard</Text>
               </Pressable>
-              <Pressable style={[styles.modalButton, styles.modalButtonPrimary]} onPress={confirmSave}>
-                <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
+              <Pressable
+                style={[styles.modalButton, { backgroundColor: colors.accent }]}
+                onPress={confirmSave}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.onAccent }]}>Save</Text>
               </Pressable>
             </View>
           </View>
@@ -170,41 +195,33 @@ export default function FolderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   list: { flex: 1, paddingHorizontal: 16 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: '#999', fontSize: 15 },
+  emptyText: { fontSize: 15 },
   recordingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
-  playIcon: { fontSize: 18 },
   recordingName: { flex: 1, fontSize: 16, fontWeight: '600' },
-  recordingDate: { fontSize: 13, color: '#999' },
+  recordingDate: { fontSize: 13 },
   recordArea: {
     alignItems: 'center',
     paddingVertical: 24,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
     gap: 8,
   },
-  timer: { fontSize: 16, fontVariant: ['tabular-nums'], color: '#555' },
+  timer: { fontSize: 16, fontVariant: ['tabular-nums'] },
   recordButton: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#e5484d',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recordButtonActive: {
-    backgroundColor: '#b3261e',
-  },
-  recordButtonText: { color: '#fff', fontSize: 28 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -213,7 +230,6 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '85%',
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     gap: 16,
@@ -221,7 +237,6 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '700' },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -229,7 +244,5 @@ const styles = StyleSheet.create({
   },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   modalButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-  modalButtonPrimary: { backgroundColor: '#2f6fed' },
-  modalButtonText: { fontSize: 15, fontWeight: '600', color: '#555' },
-  modalButtonTextPrimary: { color: '#fff' },
+  modalButtonText: { fontSize: 15, fontWeight: '600' },
 });

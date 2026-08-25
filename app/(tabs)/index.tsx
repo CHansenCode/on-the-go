@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 
 import SwipeableCard from '../../components/SwipeableCard';
 import { Card, initialCards, languageOneLabel, languageTwoLabel } from '../../data/flashcards';
+import { useTheme } from '../../lib/theme';
 
 // Which language is shown as the prompt for a freshly-drawn card. Picked
 // once per card draw so both directions get practiced.
@@ -12,6 +12,8 @@ function randomSide(): 'one' | 'two' {
 }
 
 export default function LearningScreen() {
+  const { colors } = useTheme();
+
   // In-memory only — this resets on every reload. There's no db yet, and
   // no logic yet for how often a card comes up or when it gets archived;
   // for now every card is equally likely, in a fixed order.
@@ -52,8 +54,8 @@ export default function LearningScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.header, { color: colors.textMuted }]}>
         {side === 'one' ? languageOneLabel : languageTwoLabel} → {side === 'one' ? languageTwoLabel : languageOneLabel}
       </Text>
 
@@ -68,11 +70,9 @@ export default function LearningScreen() {
         />
       </View>
 
-      <Text style={styles.progress}>
+      <Text style={[styles.progress, { color: colors.textMuted }]}>
         {card.name} · completed {card.timesCompleted}×
       </Text>
-
-      <StatusBar style="auto" />
     </View>
   );
 }
@@ -80,7 +80,6 @@ export default function LearningScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f7f9',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -89,7 +88,6 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#888',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -99,6 +97,5 @@ const styles = StyleSheet.create({
   },
   progress: {
     fontSize: 14,
-    color: '#999',
   },
 });

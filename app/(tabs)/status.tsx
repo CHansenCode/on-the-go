@@ -1,10 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useTheme } from '../../lib/theme';
+
 export default function StatusScreen() {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Status</Text>
-      <Text style={styles.subtitle}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.title, { color: colors.text }]}>Status</Text>
+      <Text style={[styles.subtitle, { color: colors.textMuted }]}>
         Nothing tracked here yet — tell Claude what you'd like this tab to
         show.
       </Text>
@@ -15,7 +19,6 @@ export default function StatusScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -28,6 +31,5 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    color: '#555',
   },
 });
