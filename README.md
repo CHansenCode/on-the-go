@@ -1,4 +1,4 @@
-# Drembmon
+# Dremonkes
 
 An Android app for sharing poems, plus a language-learning flashcard tab.
 Built with [Expo](https://expo.dev) + React Native + TypeScript, developed
