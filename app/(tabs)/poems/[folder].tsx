@@ -5,6 +5,8 @@ import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
@@ -36,6 +38,31 @@ export default function FolderScreen() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 200);
 
+  // One shared player for the whole list — tapping a row loads that
+  // recording into it and plays; tapping the one already playing pauses it.
+  const player = useAudioPlayer(null);
+  const playerStatus = useAudioPlayerStatus(player);
+  const [playingUri, setPlayingUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (playerStatus.didJustFinish) {
+      setPlayingUri(null);
+    }
+  }, [playerStatus.didJustFinish]);
+
+  const togglePlay = (recording: Recording) => {
+    const isThisOne = playingUri === recording.file.uri;
+    if (isThisOne && playerStatus.playing) {
+      player.pause();
+      return;
+    }
+    if (!isThisOne) {
+      player.replace(recording.file.uri);
+    }
+    player.play();
+    setPlayingUri(recording.file.uri);
+  };
+
   const refresh = useCallback(() => {
     setRecordings(listRecordings(folder));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,6 +77,8 @@ export default function FolderScreen() {
   const startRecording = async () => {
     const { granted } = await requestRecordingPermissionsAsync();
     if (!granted) return;
+    player.pause();
+    setPlayingUri(null);
     await recorder.prepareToRecordAsync();
     recorder.record();
   };
@@ -88,12 +117,16 @@ export default function FolderScreen() {
         keyExtractor={(item) => item.file.uri}
         contentContainerStyle={recordings.length === 0 ? styles.emptyContainer : undefined}
         ListEmptyComponent={<Text style={styles.emptyText}>No poems recorded here yet.</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.recordingRow}>
-            <Text style={styles.recordingName}>🎙️ {item.name}</Text>
-            <Text style={styles.recordingDate}>{formatDate(item.createdAt)}</Text>
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const isPlaying = playingUri === item.file.uri && playerStatus.playing;
+          return (
+            <Pressable style={styles.recordingRow} onPress={() => togglePlay(item)}>
+              <Text style={styles.playIcon}>{isPlaying ? '⏸' : '▶️'}</Text>
+              <Text style={styles.recordingName}>{item.name}</Text>
+              <Text style={styles.recordingDate}>{formatDate(item.createdAt)}</Text>
+            </Pressable>
+          );
+        }}
       />
 
       <View style={styles.recordArea}>
@@ -143,13 +176,14 @@ const styles = StyleSheet.create({
   emptyText: { color: '#999', fontSize: 15 },
   recordingRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  recordingName: { fontSize: 16, fontWeight: '600' },
+  playIcon: { fontSize: 18 },
+  recordingName: { flex: 1, fontSize: 16, fontWeight: '600' },
   recordingDate: { fontSize: 13, color: '#999' },
   recordArea: {
     alignItems: 'center',
