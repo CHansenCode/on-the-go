@@ -9,6 +9,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Learning' }} />
+      <Tabs.Screen name="poems" options={{ title: 'Poems', headerShown: false }} />
       <Tabs.Screen name="status" options={{ title: 'Status' }} />
     </Tabs>
   );
