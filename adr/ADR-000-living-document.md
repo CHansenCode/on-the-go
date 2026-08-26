@@ -84,16 +84,37 @@ different work and one open PR — **not yet reconciled**:
     name" Settings field, not a login, explicitly flagged there as not
     real auth.
 
-  Decision on how to reconcile these two is **deliberately deferred**:
-  the user wants to see main-frame's actual setup first before deciding
-  which direction (or what merge of the two) fits best. Don't
-  unilaterally merge, close, or rebase either branch onto the other
-  without checking in first.
+  Decision on how to reconcile these two is **deliberately deferred to
+  tomorrow** (as of 2026-08-27), pending a look at main-frame's actual
+  setup. Confirmed direction so far: **the features built on `6ce6lt`
+  (Dramonkes: flashcards, Poems recording/sharing) are real, wanted
+  work to keep** — this isn't a "pick one branch and discard the other"
+  situation, it's a merge that also has to resolve conflicting
+  decisions the two branches made independently, chief among them:
+  - **Auth model conflict:** `2l3rm8`'s mock two-account login (real
+    sign-in, no server yet) vs. `6ce6lt`'s "Your name" Settings field
+    (no auth at all, explicitly flagged there as not real). These don't
+    merge automatically — pick one or design a third answer.
+  - **Dev loop conflict:** `2l3rm8` assumes the `git pull` + Expo Go
+    loop described in `README.md`. `6ce6lt` already moved to an EAS
+    Build → download `.apk` → sideload loop, run from a **Claude mobile
+    app session** configured with permissions to trigger Expo builds
+    directly (not through a `git push` to a main branch — there is no
+    main branch; that agent commits to its own branch and triggers
+    builds from there).
+  - Neither branch has ever been merged into a default/main branch —
+    none exists yet. Don't assume a build or "update" implies anything
+    landed anywhere beyond that agent's own branch.
+
+  Don't unilaterally merge, close, or rebase either branch onto the
+  other without checking in first.
 
 ## To-dos (backlog)
 
-- [ ] **Once main-frame's setup is known:** decide how to reconcile the
-      two branches above (which direction wins, or how to merge them).
+- [ ] **Tomorrow, once main-frame's setup is known:** merge the two
+      branches, keeping `6ce6lt`'s feature work (flashcards, Poems),
+      and resolve the auth-model and dev-loop conflicts described
+      above — not a pick-one-discard-one call, an actual reconciliation.
 - [ ] Define what the "sharing" feature actually is/does (the app's
       core purpose is still TBD on `2l3rm8` — see `README.md`; PR #1
       already has a candidate answer, the Poems feature).
