@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Directory } from 'expo-file-system';
 
-import { AddIcon, FolderIcon } from '../../../components/icons';
+import { AddIcon, FolderIcon, TrashIcon } from '../../../components/icons';
 import ScreenHeader from '../../../components/ScreenHeader';
-import { createFolder, listFolders } from '../../../lib/poems';
+import { createFolder, deleteFolder, listFolders } from '../../../lib/poems';
 import { useTheme } from '../../../lib/theme';
 
 export default function PoemsFolderListScreen() {
@@ -40,6 +40,24 @@ export default function PoemsFolderListScreen() {
     refresh();
   };
 
+  const handleDeleteFolder = (folder: Directory) => {
+    Alert.alert(
+      `Delete "${folder.name}"?`,
+      'This deletes every recording inside it. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteFolder(folder);
+            refresh();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScreenHeader
@@ -68,6 +86,9 @@ export default function PoemsFolderListScreen() {
           >
             <FolderIcon size={22} color={colors.accent} />
             <Text style={[styles.folderName, { color: colors.text }]}>{item.name}</Text>
+            <Pressable onPress={() => handleDeleteFolder(item)} hitSlop={12}>
+              <TrashIcon size={20} color={colors.textMuted} />
+            </Pressable>
           </Pressable>
         )}
       />
@@ -114,7 +135,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
-  folderName: { fontSize: 18, fontWeight: '600' },
+  folderName: { flex: 1, fontSize: 18, fontWeight: '600' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 15, textAlign: 'center', paddingHorizontal: 24 },
   modalBackdrop: {

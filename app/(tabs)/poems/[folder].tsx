@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   RecordingPresets,
@@ -12,9 +12,18 @@ import {
 } from 'expo-audio';
 import { File } from 'expo-file-system';
 
-import { MicIcon, PauseIcon, PlayIcon, StopIcon } from '../../../components/icons';
+import { MicIcon, PauseIcon, PlayIcon, ShareIcon, StopIcon, TrashIcon } from '../../../components/icons';
 import ScreenHeader from '../../../components/ScreenHeader';
-import { getFolder, listRecordings, saveRecording, type Recording } from '../../../lib/poems';
+import {
+  deleteRecording,
+  getFolder,
+  listRecordings,
+  markRecordingShared,
+  markRecordingUnshared,
+  saveRecording,
+  type Recording,
+} from '../../../lib/poems';
+import { shareRecording, unshareRecording } from '../../../lib/server';
 import { useTheme } from '../../../lib/theme';
 
 function formatDuration(ms: number) {
@@ -37,6 +46,7 @@ export default function FolderScreen() {
   const folder = getFolder(folderName);
 
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [sharingUris, setSharingUris] = useState<Set<string>>(new Set());
   const [pendingUri, setPendingUri] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
 
@@ -112,6 +122,61 @@ export default function FolderScreen() {
     setNameInput('');
   };
 
+  const replaceRecording = (updated: Recording) => {
+    setRecordings((prev) => prev.map((r) => (r.file.uri === updated.file.uri ? updated : r)));
+  };
+
+  const handleToggleShare = async (recording: Recording) => {
+    const uri = recording.file.uri;
+    setSharingUris((prev) => new Set(prev).add(uri));
+    try {
+      if (recording.shared) {
+        if (recording.remoteId) {
+          await unshareRecording(recording.remoteId);
+        }
+        replaceRecording(markRecordingUnshared(recording));
+      } else {
+        const base64 = await recording.file.base64();
+        const remoteId = await shareRecording({
+          name: recording.name,
+          directory: [folderName],
+          soundFileBase64: base64,
+        });
+        replaceRecording(markRecordingShared(recording, remoteId));
+      }
+    } catch (err) {
+      Alert.alert(recording.shared ? 'Could not unshare' : 'Could not share', (err as Error).message);
+    } finally {
+      setSharingUris((prev) => {
+        const next = new Set(prev);
+        next.delete(uri);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteRecording = (recording: Recording) => {
+    Alert.alert(`Delete "${recording.name}"?`, 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          if (recording.shared && recording.remoteId) {
+            // Best effort — the local delete proceeds either way.
+            unshareRecording(recording.remoteId).catch(() => {});
+          }
+          if (playingUri === recording.file.uri) {
+            player.pause();
+            setPlayingUri(null);
+          }
+          deleteRecording(recording);
+          refresh();
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader title={folderName} onBack={() => router.back()} />
@@ -126,19 +191,31 @@ export default function FolderScreen() {
         }
         renderItem={({ item }) => {
           const isPlaying = playingUri === item.file.uri && playerStatus.playing;
+          const isBusy = sharingUris.has(item.file.uri);
           return (
-            <Pressable
-              style={[styles.recordingRow, { borderBottomColor: colors.border }]}
-              onPress={() => togglePlay(item)}
-            >
-              {isPlaying ? (
-                <PauseIcon size={22} color={colors.accent} />
-              ) : (
-                <PlayIcon size={22} color={colors.accent} />
-              )}
-              <Text style={[styles.recordingName, { color: colors.text }]}>{item.name}</Text>
-              <Text style={[styles.recordingDate, { color: colors.textMuted }]}>{formatDate(item.createdAt)}</Text>
-            </Pressable>
+            <View style={[styles.recordingRow, { borderBottomColor: colors.border }]}>
+              <Pressable style={styles.recordingMain} onPress={() => togglePlay(item)}>
+                {isPlaying ? (
+                  <PauseIcon size={22} color={colors.accent} />
+                ) : (
+                  <PlayIcon size={22} color={colors.accent} />
+                )}
+                <Text
+                  style={[styles.recordingName, { color: item.shared ? colors.accent : colors.text }]}
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
+                <Text style={[styles.recordingDate, { color: colors.textMuted }]}>{formatDate(item.createdAt)}</Text>
+              </Pressable>
+
+              <Pressable onPress={() => handleToggleShare(item)} disabled={isBusy} hitSlop={12}>
+                <ShareIcon size={20} color={item.shared ? colors.accent : colors.textMuted} />
+              </Pressable>
+              <Pressable onPress={() => handleDeleteRecording(item)} hitSlop={12}>
+                <TrashIcon size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
           );
         }}
       />
@@ -204,9 +281,15 @@ const styles = StyleSheet.create({
   recordingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
+  },
+  recordingMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   recordingName: { flex: 1, fontSize: 16, fontWeight: '600' },
   recordingDate: { fontSize: 13 },

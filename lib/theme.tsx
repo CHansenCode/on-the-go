@@ -1,14 +1,13 @@
 // App-wide color scheme + a manual dark-mode toggle. Falls back to the
 // system appearance the first time the app is opened, then remembers
-// whatever the user picked in Settings — written straight to a small
-// JSON file via expo-file-system, since there's no database yet but this
-// one preference is worth persisting across app restarts.
+// whatever the user picked in Settings.
 
 import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react';
 import { Appearance } from 'react-native';
-import { File, Paths } from 'expo-file-system';
 
-export type ColorScheme = 'light' | 'dark';
+import { readSettings, writeSettings, type ColorScheme } from './settings';
+
+export type { ColorScheme };
 
 export type Colors = {
   background: string;
@@ -52,31 +51,9 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const settingsFile = new File(Paths.document, 'settings.json');
-
-function readStoredScheme(): ColorScheme | null {
-  try {
-    if (!settingsFile.exists) return null;
-    const parsed = JSON.parse(settingsFile.textSync());
-    return parsed.colorScheme === 'dark' || parsed.colorScheme === 'light' ? parsed.colorScheme : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredScheme(scheme: ColorScheme) {
-  try {
-    if (!settingsFile.exists) {
-      settingsFile.create();
-    }
-    settingsFile.write(JSON.stringify({ colorScheme: scheme }));
-  } catch {
-    // Best effort — worst case the preference doesn't survive a restart.
-  }
-}
-
 function initialScheme(): ColorScheme {
-  return readStoredScheme() ?? (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light');
+  const stored = readSettings().colorScheme;
+  return stored ?? (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light');
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
@@ -85,7 +62,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   const toggleScheme = () => {
     setScheme((prev) => {
       const next: ColorScheme = prev === 'dark' ? 'light' : 'dark';
-      writeStoredScheme(next);
+      writeSettings({ colorScheme: next });
       return next;
     });
   };

@@ -1,8 +1,10 @@
 // Poems are stored directly as files on disk — a folder is a real
 // Directory, a recording is a real audio File inside it. No database,
 // no separate index to keep in sync: the filesystem *is* the source of
-// truth. Everything here is local-only; there's no sync between devices
-// yet.
+// truth for what exists locally. Whether a recording has been shared to
+// the (not-yet-built) backend is tracked in a small JSON sidecar next to
+// each recording — e.g. "Ode to Tuesday.m4a.meta.json" — since that's
+// metadata *about* the file, not folder/file structure itself.
 
 import { Directory, File, Paths } from 'expo-file-system';
 
@@ -41,10 +43,52 @@ export function getFolder(folderName: string): Directory {
   return new Directory(getRoot(), folderName);
 }
 
+// Deletes the folder and everything in it (all its recordings).
+export function deleteFolder(folder: Directory) {
+  folder.delete();
+}
+
+type RecordingMeta = {
+  shared: boolean;
+  remoteId: string | null;
+  sharedAt: string | null;
+};
+
+const UNSHARED_META: RecordingMeta = { shared: false, remoteId: null, sharedAt: null };
+
+function metaFileFor(file: File): File {
+  return new File(file.parentDirectory, `${file.name}.meta.json`);
+}
+
+function readMeta(file: File): RecordingMeta {
+  const metaFile = metaFileFor(file);
+  try {
+    if (!metaFile.exists) return UNSHARED_META;
+    const parsed = JSON.parse(metaFile.textSync());
+    return {
+      shared: Boolean(parsed.shared),
+      remoteId: typeof parsed.remoteId === 'string' ? parsed.remoteId : null,
+      sharedAt: typeof parsed.sharedAt === 'string' ? parsed.sharedAt : null,
+    };
+  } catch {
+    return UNSHARED_META;
+  }
+}
+
+function writeMeta(file: File, meta: RecordingMeta) {
+  const metaFile = metaFileFor(file);
+  if (!metaFile.exists) {
+    metaFile.create();
+  }
+  metaFile.write(JSON.stringify(meta));
+}
+
 export type Recording = {
   file: File;
   name: string; // display name, without the file extension
   createdAt: Date | null;
+  shared: boolean;
+  remoteId: string | null;
 };
 
 export function listRecordings(folder: Directory): Recording[] {
@@ -53,11 +97,16 @@ export function listRecordings(folder: Directory): Recording[] {
     .filter((entry): entry is File => entry instanceof File && entry.name.endsWith('.m4a'));
 
   return files
-    .map((file) => ({
-      file,
-      name: file.name.replace(/\.m4a$/, ''),
-      createdAt: file.creationTime ? new Date(file.creationTime) : null,
-    }))
+    .map((file) => {
+      const meta = readMeta(file);
+      return {
+        file,
+        name: file.name.replace(/\.m4a$/, ''),
+        createdAt: file.creationTime ? new Date(file.creationTime) : null,
+        shared: meta.shared,
+        remoteId: meta.remoteId,
+      };
+    })
     .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
 }
 
@@ -79,5 +128,20 @@ export async function saveRecording(folder: Directory, name: string, recordedUri
 }
 
 export function deleteRecording(recording: Recording) {
+  const metaFile = metaFileFor(recording.file);
+  if (metaFile.exists) {
+    metaFile.delete();
+  }
   recording.file.delete();
+}
+
+export function markRecordingShared(recording: Recording, remoteId: string): Recording {
+  const meta: RecordingMeta = { shared: true, remoteId, sharedAt: new Date().toISOString() };
+  writeMeta(recording.file, meta);
+  return { ...recording, shared: true, remoteId };
+}
+
+export function markRecordingUnshared(recording: Recording): Recording {
+  writeMeta(recording.file, UNSHARED_META);
+  return { ...recording, shared: false, remoteId: null };
 }
