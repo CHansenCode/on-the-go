@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../lib/theme';
 import type { Card } from '../data/flashcards';
+import ScreenHeader from './ScreenHeader';
 import SwipeableCard from './SwipeableCard';
 
 // Which language is shown as the prompt for a freshly-drawn card. Picked
@@ -61,49 +62,42 @@ export default function FlashcardSession({ cards: initial, languageOneLabel, lan
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Pressable style={styles.changeDeck} onPress={onExit}>
-        <Text style={[styles.changeDeckText, { color: colors.accent }]}>← Change deck</Text>
-      </Pressable>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScreenHeader title="Learning" onBack={onExit} />
+      <View style={styles.content}>
+        <Text style={[styles.header, { color: colors.textMuted }]}>
+          {side === 'one' ? languageOneLabel : languageTwoLabel} → {side === 'one' ? languageTwoLabel : languageOneLabel}
+        </Text>
 
-      <Text style={[styles.header, { color: colors.textMuted }]}>
-        {side === 'one' ? languageOneLabel : languageTwoLabel} → {side === 'one' ? languageTwoLabel : languageOneLabel}
-      </Text>
+        <View style={styles.cardArea}>
+          <SwipeableCard
+            key={card.id}
+            prompt={prompt}
+            answer={answer}
+            revealed={revealed}
+            onReveal={() => setRevealed(true)}
+            onSwipe={handleSwipe}
+          />
+        </View>
 
-      <View style={styles.cardArea}>
-        <SwipeableCard
-          key={card.id}
-          prompt={prompt}
-          answer={answer}
-          revealed={revealed}
-          onReveal={() => setRevealed(true)}
-          onSwipe={handleSwipe}
-        />
+        <Text style={[styles.progress, { color: colors.textMuted }]}>
+          {card.name} · card {(index % cards.length) + 1} of {cards.length} · completed {card.timesCompleted}×
+        </Text>
       </View>
-
-      <Text style={[styles.progress, { color: colors.textMuted }]}>
-        {card.name} · card {(index % cards.length) + 1} of {cards.length} · completed {card.timesCompleted}×
-      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
     gap: 16,
-  },
-  changeDeck: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-  },
-  changeDeckText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   header: {
     fontSize: 14,

@@ -8,14 +8,12 @@ export default function PoemsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerTitleStyle: { fontWeight: '700', color: colors.text },
-        headerStyle: { backgroundColor: colors.surface },
-        headerShadowVisible: false,
-        headerTintColor: colors.accent,
+        // Each screen renders its own ScreenHeader instead.
+        headerShown: false,
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Poems' }} />
+      <Stack.Screen name="index" />
       <Stack.Screen name="[folder]" />
     </Stack>
   );

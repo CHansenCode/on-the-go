@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -13,6 +13,7 @@ import {
 import { File } from 'expo-file-system';
 
 import { MicIcon, PauseIcon, PlayIcon, StopIcon } from '../../../components/icons';
+import ScreenHeader from '../../../components/ScreenHeader';
 import { getFolder, listRecordings, saveRecording, type Recording } from '../../../lib/poems';
 import { useTheme } from '../../../lib/theme';
 
@@ -30,6 +31,7 @@ function formatDate(date: Date | null) {
 
 export default function FolderScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const { folder: folderParam } = useLocalSearchParams<{ folder: string }>();
   const folderName = decodeURIComponent(folderParam ?? '');
   const folder = getFolder(folderName);
@@ -112,7 +114,7 @@ export default function FolderScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: folderName }} />
+      <ScreenHeader title={folderName} onBack={() => router.back()} />
 
       <FlatList
         style={styles.list}

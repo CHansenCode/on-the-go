@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Directory } from 'expo-file-system';
 
 import { AddIcon, FolderIcon } from '../../../components/icons';
+import ScreenHeader from '../../../components/ScreenHeader';
 import { createFolder, listFolders } from '../../../lib/poems';
 import { useTheme } from '../../../lib/theme';
 
@@ -11,6 +12,7 @@ export default function PoemsFolderListScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const [folders, setFolders] = useState<Directory[]>([]);
+  const [creating, setCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
   const refresh = useCallback(() => {
@@ -19,37 +21,45 @@ export default function PoemsFolderListScreen() {
 
   useFocusEffect(refresh);
 
-  const handleCreateFolder = () => {
+  const openCreate = () => {
+    setNewFolderName('');
+    setCreating(true);
+  };
+
+  const cancelCreate = () => {
+    setCreating(false);
+    setNewFolderName('');
+  };
+
+  const confirmCreate = () => {
     const name = newFolderName.trim();
     if (!name) return;
     createFolder(name);
+    setCreating(false);
     setNewFolderName('');
     refresh();
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.newFolderRow}>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-          placeholder="New folder name"
-          placeholderTextColor={colors.textMuted}
-          value={newFolderName}
-          onChangeText={setNewFolderName}
-          onSubmitEditing={handleCreateFolder}
-          returnKeyType="done"
-        />
-        <Pressable style={[styles.addButton, { backgroundColor: colors.accent }]} onPress={handleCreateFolder}>
-          <AddIcon size={22} color={colors.onAccent} />
-        </Pressable>
-      </View>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScreenHeader
+        title="Poems"
+        right={
+          <Pressable onPress={openCreate} hitSlop={12}>
+            <AddIcon size={24} color={colors.accent} />
+          </Pressable>
+        }
+      />
 
       <FlatList
+        style={styles.list}
         data={folders}
         keyExtractor={(folder) => folder.uri}
         contentContainerStyle={folders.length === 0 ? styles.emptyContainer : undefined}
         ListEmptyComponent={
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>No folders yet — create one above.</Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+            No folders yet — tap + above to create one.
+          </Text>
         }
         renderItem={({ item }) => (
           <Pressable
@@ -61,27 +71,42 @@ export default function PoemsFolderListScreen() {
           </Pressable>
         )}
       />
+
+      <Modal visible={creating} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>New folder</Text>
+            <TextInput
+              style={[styles.modalInput, { borderColor: colors.border, color: colors.text }]}
+              value={newFolderName}
+              onChangeText={setNewFolderName}
+              placeholder="e.g. Us"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              onSubmitEditing={confirmCreate}
+              returnKeyType="done"
+            />
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalButton} onPress={cancelCreate}>
+                <Text style={[styles.modalButtonText, { color: colors.textMuted }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, { backgroundColor: colors.accent }]}
+                onPress={confirmCreate}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.onAccent }]}>Create</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  newFolderRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  addButton: {
-    width: 44,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  screen: { flex: 1 },
+  list: { flex: 1, paddingHorizontal: 16 },
   folderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -91,5 +116,28 @@ const styles = StyleSheet.create({
   },
   folderName: { fontSize: 18, fontWeight: '600' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 15 },
+  emptyText: { fontSize: 15, textAlign: 'center', paddingHorizontal: 24 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: '85%',
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700' },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  modalButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
+  modalButtonText: { fontSize: 15, fontWeight: '600' },
 });

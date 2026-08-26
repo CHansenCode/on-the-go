@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import FlashcardSession from '../../components/FlashcardSession';
+import ScreenHeader from '../../components/ScreenHeader';
 import { initialCards, languageOneLabel, languageTwoLabel, listGroups } from '../../data/flashcards';
 import { useTheme } from '../../lib/theme';
 
@@ -49,18 +50,21 @@ function CategoryStep({ onSelect }: { onSelect: (group: string) => void }) {
   const groups = listGroups(initialCards);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Choose a category</Text>
-      <View style={styles.optionList}>
-        {groups.map((g) => (
-          <Pressable
-            key={g}
-            style={[styles.optionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => onSelect(g)}
-          >
-            <Text style={[styles.optionText, { color: colors.text }]}>{g}</Text>
-          </Pressable>
-        ))}
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScreenHeader title="Learning" />
+      <View style={styles.content}>
+        <Text style={[styles.title, { color: colors.text }]}>Choose a category</Text>
+        <View style={styles.optionList}>
+          {groups.map((g) => (
+            <Pressable
+              key={g}
+              style={[styles.optionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => onSelect(g)}
+            >
+              <Text style={[styles.optionText, { color: colors.text }]}>{g}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -84,61 +88,54 @@ function CountStep({
   const [count, setCount] = useState(() => clamp(DEFAULT_COUNT));
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Pressable style={styles.backButton} onPress={onBack}>
-        <Text style={[styles.backButtonText, { color: colors.accent }]}>← Back</Text>
-      </Pressable>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScreenHeader title="Learning" onBack={onBack} />
+      <View style={styles.content}>
+        <Text style={[styles.title, { color: colors.text }]}>How many words?</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{group}</Text>
 
-      <Text style={[styles.title, { color: colors.text }]}>How many words?</Text>
-      <Text style={[styles.subtitle, { color: colors.textMuted }]}>{group}</Text>
+        <View style={styles.counterRow}>
+          <Pressable
+            style={[styles.counterButton, { borderColor: colors.border }]}
+            onPress={() => setCount((c) => clamp(c - COUNT_STEP))}
+            disabled={count <= min}
+          >
+            <Text style={[styles.counterButtonText, { color: count <= min ? colors.textMuted : colors.text }]}>
+              −10
+            </Text>
+          </Pressable>
 
-      <View style={styles.counterRow}>
-        <Pressable
-          style={[styles.counterButton, { borderColor: colors.border }]}
-          onPress={() => setCount((c) => clamp(c - COUNT_STEP))}
-          disabled={count <= min}
-        >
-          <Text style={[styles.counterButtonText, { color: count <= min ? colors.textMuted : colors.text }]}>
-            −10
-          </Text>
-        </Pressable>
+          <Text style={[styles.countValue, { color: colors.text }]}>{count}</Text>
 
-        <Text style={[styles.countValue, { color: colors.text }]}>{count}</Text>
+          <Pressable
+            style={[styles.counterButton, { borderColor: colors.border }]}
+            onPress={() => setCount((c) => clamp(c + COUNT_STEP))}
+            disabled={count >= max}
+          >
+            <Text style={[styles.counterButtonText, { color: count >= max ? colors.textMuted : colors.text }]}>
+              +10
+            </Text>
+          </Pressable>
+        </View>
 
-        <Pressable
-          style={[styles.counterButton, { borderColor: colors.border }]}
-          onPress={() => setCount((c) => clamp(c + COUNT_STEP))}
-          disabled={count >= max}
-        >
-          <Text style={[styles.counterButtonText, { color: count >= max ? colors.textMuted : colors.text }]}>
-            +10
-          </Text>
+        <Pressable style={[styles.startButton, { backgroundColor: colors.accent }]} onPress={() => onStart(count)}>
+          <Text style={[styles.startButtonText, { color: colors.onAccent }]}>Start</Text>
         </Pressable>
       </View>
-
-      <Pressable style={[styles.startButton, { backgroundColor: colors.accent }]} onPress={() => onStart(count)}>
-        <Text style={[styles.startButtonText, { color: colors.onAccent }]}>Start</Text>
-      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
     gap: 16,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-  },
-  backButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   title: {
     fontSize: 22,
