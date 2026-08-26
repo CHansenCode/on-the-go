@@ -1,35 +1,37 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { HomeScreen } from './src/screens/HomeScreen';
+
+function Root() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return user ? <HomeScreen /> : <LoginScreen />;
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>On The Go</Text>
-      <Text style={styles.subtitle}>
-        If you can read this on your phone, the live-reload loop works. Edit
-        App.tsx and watch this screen update.
-      </Text>
+    <AuthProvider>
+      <Root />
       <StatusBar style="auto" />
-    </View>
+    </AuthProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loading: {
     flex: 1,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#555',
+    backgroundColor: '#fff',
   },
 });
