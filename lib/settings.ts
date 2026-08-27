@@ -9,7 +9,11 @@ export type ColorScheme = 'light' | 'dark';
 export type AppSettings = {
   colorScheme?: ColorScheme;
   serverUrl?: string;
+  /** @deprecated superseded by the real login below (authToken etc.) */
   userName?: string;
+  authToken?: string;
+  authUsername?: string;
+  authDisplayName?: string;
 };
 
 const settingsFile = new File(Paths.document, 'settings.json');
