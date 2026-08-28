@@ -85,11 +85,10 @@ that lives — a running backlog and sketchpad, not a decision record.
   production alongside the original 100-word Swedish↔Lithuanian deck
   (deck 1). `data/flashcards.ts` and all local dummy data are gone —
   the Learning tab is 100% API-backed now.
-- **on-the-go's Server URL is still not actually set anywhere.** It's a
-  per-device Settings field (`readSettings().serverUrl`), typed by hand
-  on the phone — nothing in the repo can set it. Until someone opens
-  Settings and enters the production URl above, the Learning tab and
-  Poems sharing can't reach main-frame at all, on either device.
+- **on-the-go's Server URL now defaults to production in code**
+  (`lib/settings.ts`'s `DEFAULT_SERVER_URL`) rather than needing to be
+  typed in by hand on each phone — Settings can still override it (e.g.
+  to point at staging). No device-side action needed for this anymore.
 - **ADR-001** (push notifications): drafted, not implemented. Decision
   is Expo Push Service + an EAS Cloud development build, triggered once
   main-frame's sharing feature is live end-to-end (the client side
@@ -102,10 +101,8 @@ that lives — a running backlog and sketchpad, not a decision record.
 
 ## To-dos (backlog)
 
-- [ ] **On-device:** open Settings and set the Server URL to
-      `https://main-frame-chansencodes-projects.vercel.app`, then log in
-      — neither the Learning tab nor Poems sharing can reach main-frame
-      until that's typed in by hand on each phone.
+- [ ] **On-device:** log in from Settings (Server URL now defaults
+      correctly on its own — see above).
 - [ ] Confirm the two real accounts actually exist on main-frame
       (`npm run create-user` run twice against the real `DATABASE_URL`)
       — not confirmed from this session's vantage point.
