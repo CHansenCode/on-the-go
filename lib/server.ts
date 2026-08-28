@@ -1,8 +1,9 @@
-// Talks to the not-yet-built "main-frame" backend. The endpoint shapes
-// here are a guess at a reasonable contract — {name, user, soundFile,
-// directory} in, {id} back — and are meant to be the first thing we
-// reconcile once that server actually exists and we know its real API.
+// Talks to the "main-frame" backend. The endpoint shapes here are a
+// guess at a reasonable contract — {name, user, soundFile, directory}
+// in, {id} back — documented in docs/sharing-integration.md, and meant
+// to be the first thing reconciled once /api/recordings actually exists.
 
+import { getSession } from './auth';
 import { readSettings } from './settings';
 
 export class ServerNotConfiguredError extends Error {
@@ -12,10 +13,23 @@ export class ServerNotConfiguredError extends Error {
   }
 }
 
+export class NotLoggedInError extends Error {
+  constructor() {
+    super('Not logged in. Log in from Settings first.');
+    this.name = 'NotLoggedInError';
+  }
+}
+
 function getServerUrl(): string {
   const url = readSettings().serverUrl?.trim();
   if (!url) throw new ServerNotConfiguredError();
   return url.replace(/\/+$/, '');
+}
+
+function authHeaders(): Record<string, string> {
+  const session = getSession();
+  if (!session) throw new NotLoggedInError();
+  return { Authorization: `Bearer ${session.token}` };
 }
 
 export type ShareRecordingInput = {
@@ -27,12 +41,13 @@ export type ShareRecordingInput = {
 // Uploads the recording; returns the remote record's id.
 export async function shareRecording({ name, directory, soundFileBase64 }: ShareRecordingInput): Promise<string> {
   const baseUrl = getServerUrl();
-  const user = readSettings().userName?.trim() || 'unknown';
+  const session = getSession();
+  if (!session) throw new NotLoggedInError();
 
   const response = await fetch(`${baseUrl}/api/recordings`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, user, directory, soundFile: soundFileBase64 }),
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ name, user: session.displayName, directory, soundFile: soundFileBase64 }),
   });
 
   if (!response.ok) {
@@ -51,6 +66,7 @@ export async function unshareRecording(remoteId: string): Promise<void> {
 
   const response = await fetch(`${baseUrl}/api/recordings/${encodeURIComponent(remoteId)}`, {
     method: 'DELETE',
+    headers: authHeaders(),
   });
 
   if (!response.ok && response.status !== 404) {
