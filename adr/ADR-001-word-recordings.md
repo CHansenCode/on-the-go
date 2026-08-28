@@ -13,11 +13,13 @@ designs a `word_recordings` table for this app's Learning tab: either
 person can record short audio for a word on a flashcard so the other can
 hear it. It's matched to a card by lower-cased word text rather than a
 hard foreign key, stored as raw AAC bytes directly in Postgres (no CDN
-or object storage), and comes with three requirements the eventual
-upload route must enforce: lower-case the word server-side, verify the
-audio actually decodes as AAC, and reject anything over 10 seconds. That
-ADR settles the backend shape; this one works through what those
-decisions require of on-the-go specifically.
+or object storage), and comes with requirements the eventual upload
+route must enforce: lower-case the word server-side, verify the audio
+actually decodes as AAC, reject anything over 10 seconds, and upsert
+rather than reject/duplicate on re-record. That ADR settles the backend
+shape; this one works through what those decisions require of on-the-go
+specifically — including a client-side architecture decision (caching
+recordings locally, below) that in turn reshaped main-frame's read path.
 
 Two things worth flagging about where this file lives:
 
@@ -40,13 +42,14 @@ Two things worth flagging about where this file lives:
 ## Decision (proposed)
 
 1. **Recording format: explicit AAC/`.m4a` config, not default
-   presets.** `expo-av`'s (or `expo-audio`'s) recording presets don't
-   necessarily produce the same container/codec on iOS and Android by
-   default. Recording options need to be set explicitly for both
-   platforms to guarantee `.m4a`/AAC output either way — matching what
-   main-frame's upload route will actually accept. Relying on an
-   un-inspected preset risks recording something the server then
-   rejects.
+   presets.** `expo-audio` (already a dependency — the Poems tab records
+   with it) doesn't necessarily produce the same container/codec on iOS
+   and Android with an un-inspected preset. Recording options need to be
+   set explicitly for both platforms to guarantee `.m4a`/AAC output
+   either way — matching what main-frame's upload route will actually
+   accept, and matching what Poems already saves as (`lib/poems.ts`
+   writes `.m4a` files today, so the format side of this may already be
+   covered — worth confirming rather than assuming when this gets built).
 2. **Client-side 10-second guard, mirroring the server's hard limit.**
    main-frame will reject uploads over 10 seconds — that's the real
    boundary, not this one. The front end's job is UX: catching this
@@ -70,26 +73,65 @@ Two things worth flagging about where this file lives:
    whatever endpoint main-frame exposes for this — not built yet (see
    main-frame's ADR-000 to-dos). Blocked until that lands.
 5. **Fetching a deck's cards with recordings attached, and the
-   conditional "record" button:** once a group and word count are
-   chosen, cards should come back with recording info per slot
-   (`language_one`/`language_two` independently — either, both, or
-   neither may have a recording). A slot with none shows a "record this"
-   button; a slot with one shows a play button instead. The exact
-   response shape this needs to parse depends on an open call on
-   main-frame's side — a streaming `GET /api/recordings/:id` endpoint
-   vs. an inlined base64 data URI per card (see ADR-002) — so this
-   client needs to adapt to whichever main-frame lands on rather than
-   assuming one now.
+   conditional "record"/play button:** cards come back with recording
+   metadata per slot (`language_one`/`language_two` independently —
+   either, both, or neither may have one). A slot with none shows
+   "record this"; a slot with one shows play. Playback is always from a
+   local file, never a live fetch — see the caching design below, which
+   is what actually determines the shape of the metadata and audio
+   endpoints on main-frame's side.
+
+### Local caching: play from disk, not from the network
+
+Recordings are cached to local device storage rather than fetched fresh
+on every playback, mirroring the Poems tab's existing approach
+(`lib/poems.ts`): the filesystem is the source of truth for what's
+cached, no separate database or index to keep in sync with it beyond a
+small per-file metadata sidecar (Poems' `<file>.m4a.meta.json` pattern).
+
+- **Storage layout:** a new `word-recordings/` directory under
+  `Paths.document` (via `expo-file-system`'s `Directory`/`File`, same as
+  Poems), one `<sanitized-word>.m4a` file per cached recording plus a
+  `<sanitized-word>.m4a.meta.json` sidecar holding `{ recordedAt }` —
+  the same timestamp main-frame returns for that word, used purely to
+  detect staleness, not displayed anywhere.
+- **The flow, once a group and word count are chosen:**
+  1. Show a loading state.
+  2. Fetch that deck's cards from main-frame — metadata only
+     (`recordedAt` per slot with a recording, `null` for slots without
+     one), no audio bytes. See main-frame's ADR-002 for this endpoint's
+     shape.
+  3. For each word in the response that has a recording, compare its
+     `recordedAt` to the local sidecar's (if any). Collect the words
+     that are either not cached at all or whose local copy is older.
+  4. Send that collected list — and only that list — in one batched
+     request to main-frame, get back audio for just those words, save
+     each to `word-recordings/`, and write its sidecar.
+  5. Drop the loading state; render the deck. Every play button reads
+     from the local `.m4a` file, never the network.
+- **Re-recording is what makes step 3 necessary at all:** since
+  main-frame upserts a word's recording in place (ADR-002) rather than
+  keeping history, `recorded_at` moving forward is the only signal that
+  a previously-cached copy is now stale — there's no other way to know
+  someone else re-recorded a word since this device last synced it.
+- **No eviction policy for now.** Even a full corpus of recordings is
+  small (tens of MB at worst — see main-frame's ADR-002 storage math),
+  so nothing here deletes a cached recording once fetched. Worth
+  revisiting only if the corpus grows enough for that to matter, which
+  isn't close today.
 
 ## Consequences
 
 - Everything above is blocked on main-frame's API surface existing at
   all; nothing here can be implemented before then (tracked on
   main-frame's side, not duplicated in this file).
-- Whichever way point 5 resolves changes how much work this client does
-  itself — a dedicated audio-fetch step per recording vs. everything
-  arriving in one response — worth confirming with main-frame before
-  starting implementation rather than guessing and building twice.
+- The local cache never shrinks on its own (no eviction policy) — fine
+  at today's scale, worth a real look if the recording corpus ever grows
+  enough to threaten device storage, which is far off.
+- A stale local recording is only ever detected the next time its deck
+  is opened (the staleness check happens at deck-load time, not via any
+  background sync) — someone re-recording a word won't reach the other
+  person's device until they next open that deck.
 - Recording requires microphone permission, new for this app — not
   decided here, but worth noting alongside the notification permissions
   `2l3rm8`'s ADR-001 (push notifications) already introduces, since both
