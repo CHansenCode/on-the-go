@@ -3,44 +3,39 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import FlashcardSession, { type SessionCard } from '../../components/FlashcardSession';
 import ScreenHeader from '../../components/ScreenHeader';
-import { CURRENT_DECK, fetchDeckCards } from '../../lib/learningApi';
+import { DECKS, fetchDeckCards, type Deck } from '../../lib/learningApi';
 import { syncRecordings } from '../../lib/wordRecordings';
 import { useTheme } from '../../lib/theme';
 
 const COUNT_STEP = 10;
 const DEFAULT_COUNT = 50;
 
-// Only one deck exists today (see CURRENT_DECK) — shown as a single-item
-// list so this screen doesn't need reshaping once a "list decks" endpoint
-// exists and there's more than one to choose from.
-const GROUPS = [CURRENT_DECK.name];
-
 type Phase =
   | { kind: 'category' }
-  | { kind: 'count'; available: number }
+  | { kind: 'count'; deck: Deck; available: number }
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
-  | { kind: 'session'; cards: SessionCard[] };
+  | { kind: 'session'; deck: Deck; cards: SessionCard[] };
 
 export default function LearningScreen() {
   const [phase, setPhase] = useState<Phase>({ kind: 'category' });
 
-  const loadCount = async () => {
+  const loadCount = async (deck: Deck) => {
     setPhase({ kind: 'loading' });
     try {
-      const all = await fetchDeckCards(CURRENT_DECK.id);
-      setPhase({ kind: 'count', available: all.length });
+      const all = await fetchDeckCards(deck.id);
+      setPhase({ kind: 'count', deck, available: all.length });
     } catch (err) {
       setPhase({ kind: 'error', message: (err as Error).message });
     }
   };
 
-  const start = async (count: number) => {
+  const start = async (deck: Deck, count: number) => {
     setPhase({ kind: 'loading' });
     try {
-      const sampled = await fetchDeckCards(CURRENT_DECK.id, count);
+      const sampled = await fetchDeckCards(deck.id, count);
       await syncRecordings(sampled);
-      setPhase({ kind: 'session', cards: sampled.map((c) => ({ ...c, timesCompleted: 0 })) });
+      setPhase({ kind: 'session', deck, cards: sampled.map((c) => ({ ...c, timesCompleted: 0 })) });
     } catch (err) {
       setPhase({ kind: 'error', message: (err as Error).message });
     }
@@ -51,8 +46,8 @@ export default function LearningScreen() {
       <FlashcardSession
         key={phase.cards.map((c) => c.id).join(',')}
         cards={phase.cards}
-        languageOneLabel={CURRENT_DECK.languageOneLabel}
-        languageTwoLabel={CURRENT_DECK.languageTwoLabel}
+        languageOneLabel={phase.deck.languageOneLabel}
+        languageTwoLabel={phase.deck.languageTwoLabel}
         onExit={() => setPhase({ kind: 'category' })}
       />
     );
@@ -69,10 +64,10 @@ export default function LearningScreen() {
   if (phase.kind === 'count') {
     return (
       <CountStep
-        group={CURRENT_DECK.name}
+        group={phase.deck.name}
         available={phase.available}
         onBack={() => setPhase({ kind: 'category' })}
-        onStart={start}
+        onStart={(count) => start(phase.deck, count)}
       />
     );
   }
@@ -80,7 +75,7 @@ export default function LearningScreen() {
   return <CategoryStep onSelect={loadCount} />;
 }
 
-function CategoryStep({ onSelect }: { onSelect: () => void }) {
+function CategoryStep({ onSelect }: { onSelect: (deck: Deck) => void }) {
   const { colors } = useTheme();
 
   return (
@@ -89,13 +84,13 @@ function CategoryStep({ onSelect }: { onSelect: () => void }) {
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>Choose a category</Text>
         <View style={styles.optionList}>
-          {GROUPS.map((g) => (
+          {DECKS.map((deck) => (
             <Pressable
-              key={g}
+              key={deck.id}
               style={[styles.optionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={onSelect}
+              onPress={() => onSelect(deck)}
             >
-              <Text style={[styles.optionText, { color: colors.text }]}>{g}</Text>
+              <Text style={[styles.optionText, { color: colors.text }]}>{deck.name}</Text>
             </Pressable>
           ))}
         </View>

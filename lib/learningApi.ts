@@ -11,15 +11,39 @@ function getServerUrl(): string {
   return url.replace(/\/+$/, '');
 }
 
-// Only one deck exists on main-frame today, and there's no "list decks"
-// endpoint yet to discover others — hardcoded until that changes. See
-// on-the-go's adr/ADR-000-living-document.md.
-export const CURRENT_DECK = {
-  id: 1,
-  name: 'Swedish ↔ Lithuanian',
-  languageOneLabel: 'Swedish',
-  languageTwoLabel: 'Lithuanian',
-};
+// main-frame's project has Vercel's own deployment protection on every
+// URL (staging included — see main-frame's adr/ADR-000-living-document.md),
+// so a request from outside Vercel's own infra needs this header to get
+// past the SSO wall. EXPO_PUBLIC_* vars are inlined into the JS bundle at
+// EAS build time — same "not really secret once shipped" status as any
+// other value baked into a mobile app, which this app's own docs already
+// reason about (see docs/sharing-integration.md's note on static tokens).
+// If unset (e.g. local dev against an unprotected URL), the header is
+// simply omitted rather than failing outright.
+function protectionBypassHeaders(): Record<string, string> {
+  const secret = process.env.EXPO_PUBLIC_VERCEL_BYPASS_SECRET;
+  return secret ? { 'x-vercel-protection-bypass': secret } : {};
+}
+
+// There's no "list decks" endpoint on main-frame yet, so the decks that
+// exist are hardcoded here until that changes. See on-the-go's
+// adr/ADR-000-living-document.md.
+export const DECKS = [
+  {
+    id: 1,
+    name: 'Swedish ↔ Lithuanian',
+    languageOneLabel: 'Swedish',
+    languageTwoLabel: 'Lithuanian',
+  },
+  {
+    id: 2,
+    name: 'Žuikis Puikus',
+    languageOneLabel: 'Lithuanian',
+    languageTwoLabel: 'Swedish',
+  },
+] as const;
+
+export type Deck = (typeof DECKS)[number];
 
 export type ApiCard = {
   id: number;
@@ -35,7 +59,9 @@ export type ApiCard = {
 export async function fetchDeckCards(deckId: number, wordCount?: number): Promise<ApiCard[]> {
   const baseUrl = getServerUrl();
   const query = wordCount ? `?wordCount=${wordCount}` : '';
-  const response = await fetch(`${baseUrl}/api/decks/${deckId}/cards${query}`);
+  const response = await fetch(`${baseUrl}/api/decks/${deckId}/cards${query}`, {
+    headers: protectionBypassHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`Fetching deck failed: server returned ${response.status}`);
   }
@@ -49,7 +75,7 @@ export async function fetchRecordingsBatch(words: string[]): Promise<BatchRecord
   const baseUrl = getServerUrl();
   const response = await fetch(`${baseUrl}/api/recordings/batch`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...protectionBypassHeaders() },
     body: JSON.stringify({ words }),
   });
   if (!response.ok) {
@@ -66,7 +92,7 @@ export async function uploadRecording(
   const baseUrl = getServerUrl();
   const response = await fetch(`${baseUrl}/api/recordings`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...protectionBypassHeaders() },
     body: JSON.stringify({ word, audioBase64, recordedBy }),
   });
   if (!response.ok) {
