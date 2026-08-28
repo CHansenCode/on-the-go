@@ -23,7 +23,9 @@ export const CURRENT_DECK = {
 
 export type ApiCard = {
   id: number;
-  languageEng: string;
+  // null for decks with no English gloss column in their source data
+  // (e.g. the Žuikis Puikus deck, which is Lithuanian/Swedish only).
+  languageEng: string | null;
   languageOne: string;
   languageTwo: string;
   languageOneRecording: { recordedAt: string } | null;

@@ -209,7 +209,8 @@ export default function FlashcardSession({ cards: initial, languageOneLabel, lan
         </View>
 
         <Text style={[styles.progress, { color: colors.textMuted }]}>
-          {card.languageEng} · card {(index % cards.length) + 1} of {cards.length} · completed {card.timesCompleted}×
+          {card.languageEng ? `${card.languageEng} · ` : ''}
+          card {(index % cards.length) + 1} of {cards.length} · completed {card.timesCompleted}×
         </Text>
       </View>
     </View>
