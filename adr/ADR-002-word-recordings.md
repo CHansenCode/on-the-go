@@ -1,4 +1,4 @@
-# ADR-001: Front-end requirements for word recordings
+# ADR-002: Front-end requirements for word recordings
 
 ## Status
 
@@ -30,23 +30,21 @@ shape; this one works through what those decisions require of on-the-go
 specifically — including a client-side architecture decision (caching
 recordings locally, below) that in turn reshaped main-frame's read path.
 
-Two things worth flagging about where this file lives:
+Two things worth flagging about this file's history:
 
-- This branch (`claude/android-app-chat-dev-6ce6lt`) doesn't have an
-  `adr/` folder yet — the sibling branch,
-  `claude/android-app-chat-dev-2l3rm8`, already has one (an ADR-000
-  living document plus ADR-001 on push notifications), and the two
-  branches are explicitly not yet reconciled (see `2l3rm8`'s ADR-000).
-  Rather than add a second, competing ADR-000 here that would need
-  manual merging later, this file starts the convention on this branch
-  with just the one numbered decision it's actually recording. Once the
-  branches are reconciled, this should be folded into whichever ADR-000
-  survives.
-- This branch has no main-frame integration at all yet — the Learning
-  tab runs entirely on local dummy data (`data/flashcards.ts`).
-  Everything below is blocked on main-frame's API surface existing,
-  which is itself an open to-do on main-frame's side, not something this
-  ADR can resolve.
+- It was originally written and numbered ADR-001, at a point when this
+  branch (`claude/android-app-chat-dev-6ce6lt`) had no `adr/` folder of
+  its own yet — the sibling branch, `claude/android-app-chat-dev-2l3rm8`,
+  already had one (an ADR-000 living document plus its own ADR-001 on
+  push notifications), and the two branches were explicitly not yet
+  reconciled. Renumbered to ADR-002 once that reconciliation actually
+  happened (see ADR-000's log) and `2l3rm8`'s `adr/` folder — including
+  its ADR-001 — was ported onto this branch, which otherwise would have
+  left two different ADR-001 files.
+- When this was written, this branch had no main-frame integration at
+  all — the Learning tab ran entirely on local dummy data
+  (`data/flashcards.ts`). That's what the "Implemented" status above
+  and the rest of this document now supersede.
 
 ## Decision (proposed)
 
