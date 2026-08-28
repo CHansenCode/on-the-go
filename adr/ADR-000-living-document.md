@@ -129,7 +129,31 @@ different work and one open PR — **not yet reconciled**:
 _Half-formed stuff, not yet decision-ready. Promote to a numbered ADR
 once it firms up._
 
-- (nothing yet)
+- **Build triggering needs a home that isn't tied to one session.**
+  Development on this app happens from two genuinely different places —
+  a mobile Claude session (good for dictating ADRs, catching user
+  stories on the go) and a terminal-based Claude Code session at a
+  desktop (this kind of session). Right now, actually triggering an EAS
+  build/update is only possible from whichever session happens to hold
+  live EAS credentials directly (per "Open branches" above, that's the
+  mobile session's job today — it "triggers builds directly," commit and
+  build together, from its own branch). That means "ship this" is
+  currently coupled to *which session* made the change, not to the repo
+  itself: a change made from a desktop terminal session has no way to
+  trigger the same build the mobile session can.
+  What's needed instead: a build trigger that works the same regardless
+  of which environment made the change — commit from mobile, commit from
+  desktop, either one should be able to result in a build without either
+  session needing its own standing EAS login. The immediate instinct is
+  **GitHub** as that shared point: both kinds of session can already
+  `git push`, so a GitHub-side trigger (Actions, on push or
+  `workflow_dispatch`) holding its own Expo/EAS token as a repo secret
+  would decouple "triggering a build" from "having the EAS CLI logged in
+  locally" — the same shape of problem main-frame's ADR-001 already
+  solved for its own deploy pipeline (GitHub Actions + repo secrets,
+  instead of any one developer's local Vercel/Neon credentials). Worth
+  deliberately looking at that ADR as precedent once this gets picked
+  up. Not decided, not investigated yet — just flagged so it isn't lost.
 
 ## Log
 
