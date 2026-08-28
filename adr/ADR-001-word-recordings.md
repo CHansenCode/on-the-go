@@ -2,9 +2,18 @@
 
 ## Status
 
-Draft / Proposed — not yet implemented, blocked on main-frame building
-the API surface this depends on. Captures requirements ahead of time,
-mirroring main-frame's ADR-002.
+Implemented (`lib/learningApi.ts`, `lib/wordRecordings.ts`,
+`components/FlashcardSession.tsx`) — main-frame's API surface now
+exists, and this branch calls it instead of local dummy data. Verified
+against a live main-frame instance: real cards fetched, a real AAC
+recording uploaded and re-fetched through the batch endpoint, and the
+local base64 decoder checked byte-for-byte against the original file.
+Not yet run on an actual device/simulator — that verification is still
+open, along with three gaps out of scope for this pass: there's still
+no "list decks" endpoint (`CURRENT_DECK` is hardcoded), nothing writes
+to `decks_attempts` yet (swipe results stay client-side only), and the
+`decks`/`recordings` routes aren't auth-gated (see main-frame's
+ADR-000).
 
 ## Context
 
