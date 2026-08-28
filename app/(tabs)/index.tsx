@@ -1,53 +1,87 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import FlashcardSession from '../../components/FlashcardSession';
+import FlashcardSession, { type SessionCard } from '../../components/FlashcardSession';
 import ScreenHeader from '../../components/ScreenHeader';
-import { initialCards, languageOneLabel, languageTwoLabel, listGroups } from '../../data/flashcards';
+import { CURRENT_DECK, fetchDeckCards } from '../../lib/learningApi';
+import { syncRecordings } from '../../lib/wordRecordings';
 import { useTheme } from '../../lib/theme';
 
 const COUNT_STEP = 10;
 const DEFAULT_COUNT = 50;
 
-type Selection = { group: string; count: number } | null;
+// Only one deck exists today (see CURRENT_DECK) — shown as a single-item
+// list so this screen doesn't need reshaping once a "list decks" endpoint
+// exists and there's more than one to choose from.
+const GROUPS = [CURRENT_DECK.name];
+
+type Phase =
+  | { kind: 'category' }
+  | { kind: 'count'; available: number }
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'session'; cards: SessionCard[] };
 
 export default function LearningScreen() {
-  const [group, setGroup] = useState<string | null>(null);
-  const [selection, setSelection] = useState<Selection>(null);
+  const [phase, setPhase] = useState<Phase>({ kind: 'category' });
 
-  if (selection) {
-    const deck = initialCards.filter((c) => c.group === selection.group).slice(0, selection.count);
+  const loadCount = async () => {
+    setPhase({ kind: 'loading' });
+    try {
+      const all = await fetchDeckCards(CURRENT_DECK.id);
+      setPhase({ kind: 'count', available: all.length });
+    } catch (err) {
+      setPhase({ kind: 'error', message: (err as Error).message });
+    }
+  };
+
+  const start = async (count: number) => {
+    setPhase({ kind: 'loading' });
+    try {
+      const sampled = await fetchDeckCards(CURRENT_DECK.id, count);
+      await syncRecordings(sampled);
+      setPhase({ kind: 'session', cards: sampled.map((c) => ({ ...c, timesCompleted: 0 })) });
+    } catch (err) {
+      setPhase({ kind: 'error', message: (err as Error).message });
+    }
+  };
+
+  if (phase.kind === 'session') {
     return (
       <FlashcardSession
-        key={`${selection.group}-${selection.count}`}
-        cards={deck}
-        languageOneLabel={languageOneLabel}
-        languageTwoLabel={languageTwoLabel}
-        onExit={() => {
-          setSelection(null);
-          setGroup(null);
-        }}
+        key={phase.cards.map((c) => c.id).join(',')}
+        cards={phase.cards}
+        languageOneLabel={CURRENT_DECK.languageOneLabel}
+        languageTwoLabel={CURRENT_DECK.languageTwoLabel}
+        onExit={() => setPhase({ kind: 'category' })}
       />
     );
   }
 
-  if (group) {
+  if (phase.kind === 'loading') {
+    return <LoadingStep />;
+  }
+
+  if (phase.kind === 'error') {
+    return <ErrorStep message={phase.message} onRetry={() => setPhase({ kind: 'category' })} />;
+  }
+
+  if (phase.kind === 'count') {
     return (
       <CountStep
-        group={group}
-        onBack={() => setGroup(null)}
-        onStart={(count) => setSelection({ group, count })}
+        group={CURRENT_DECK.name}
+        available={phase.available}
+        onBack={() => setPhase({ kind: 'category' })}
+        onStart={start}
       />
     );
   }
 
-  return <CategoryStep onSelect={setGroup} />;
+  return <CategoryStep onSelect={loadCount} />;
 }
 
-function CategoryStep({ onSelect }: { onSelect: (group: string) => void }) {
+function CategoryStep({ onSelect }: { onSelect: () => void }) {
   const { colors } = useTheme();
-  // select group from dummydata group by group
-  const groups = listGroups(initialCards);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -55,11 +89,11 @@ function CategoryStep({ onSelect }: { onSelect: (group: string) => void }) {
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>Choose a category</Text>
         <View style={styles.optionList}>
-          {groups.map((g) => (
+          {GROUPS.map((g) => (
             <Pressable
               key={g}
               style={[styles.optionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => onSelect(g)}
+              onPress={onSelect}
             >
               <Text style={[styles.optionText, { color: colors.text }]}>{g}</Text>
             </Pressable>
@@ -70,17 +104,46 @@ function CategoryStep({ onSelect }: { onSelect: (group: string) => void }) {
   );
 }
 
+function LoadingStep() {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScreenHeader title="Learning" />
+      <View style={styles.content}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    </View>
+  );
+}
+
+function ErrorStep({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScreenHeader title="Learning" />
+      <View style={styles.content}>
+        <Text style={[styles.title, { color: colors.text }]}>Couldn't load the deck</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{message}</Text>
+        <Pressable style={[styles.startButton, { backgroundColor: colors.accent }]} onPress={onRetry}>
+          <Text style={[styles.startButtonText, { color: colors.onAccent }]}>Try again</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 function CountStep({
   group,
+  available,
   onBack,
   onStart,
 }: {
   group: string;
+  available: number;
   onBack: () => void;
   onStart: (count: number) => void;
 }) {
   const { colors } = useTheme();
-  const available = initialCards.filter((c) => c.group === group).length;
   const min = Math.min(COUNT_STEP, available);
   const max = available;
   const clamp = (n: number) => Math.max(min, Math.min(max, n));
