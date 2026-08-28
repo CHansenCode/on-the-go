@@ -15,7 +15,7 @@ import { MicIcon, PauseIcon, PlayIcon, StopIcon } from './icons';
 import { useTheme } from '../lib/theme';
 import type { ApiCard } from '../lib/learningApi';
 import { uploadRecording } from '../lib/learningApi';
-import { readSettings } from '../lib/settings';
+import { getSession } from '../lib/auth';
 import { cacheJustUploadedRecording, getLocalRecordingUri } from '../lib/wordRecordings';
 import ScreenHeader from './ScreenHeader';
 import SwipeableCard from './SwipeableCard';
@@ -121,7 +121,7 @@ export default function FlashcardSession({ cards: initial, languageOneLabel, lan
     setUploadingWord(word);
     try {
       const audioBase64 = await new File(uri).base64();
-      const recordedBy = readSettings().userName?.trim() || undefined;
+      const recordedBy = getSession()?.displayName;
       const { recordedAt } = await uploadRecording(word, audioBase64, recordedBy);
       await cacheJustUploadedRecording(word, uri, recordedAt);
       setLocalVersion((v) => v + 1);
