@@ -68,10 +68,10 @@ that lives — a running backlog and sketchpad, not a decision record.
   NextAuth (future web login) and `/api/mobile/login` (this app's bearer
   token). `GET /api/decks/:deckId/cards`, `POST /api/recordings`
   (Learning's word_recordings upload — *not* Poems', see Sketches), and
-  `POST /api/recordings/batch` all exist and are deployed to production
-  — **but none of the three are auth-gated yet** (`requireMobileAuth()`
-  exists and is ready to adopt; main-frame's own ADR-000 to-dos track
-  this). Production's stable URL: `https://main-frame-chansencodes-projects.vercel.app`.
+  `POST /api/recordings/batch` all exist and are deployed. **All three
+  are now auth-gated behind `requireMobileAuth()`** — `lib/learningApi.ts`
+  sends the same bearer token `lib/server.ts`'s Poems calls already use
+  (see Log). Production's stable URL: `https://main-frame-chansencodes-projects.vercel.app`.
   Every request also needs an `x-vercel-protection-bypass` header to get
   past Vercel's SSO wall — see `lib/learningApi.ts`, value comes from
   `EXPO_PUBLIC_VERCEL_BYPASS_SECRET` at EAS build time, not committed.
@@ -119,10 +119,13 @@ that lives — a running backlog and sketchpad, not a decision record.
 - [ ] Confirm the two real accounts actually exist on main-frame
       (`npm run create-user` run twice against the real `DATABASE_URL`)
       — not confirmed from either session's vantage point.
-- [ ] main-frame: gate `/api/decks/:deckId/cards`, `/api/recordings`,
-      `/api/recordings/batch` behind `requireMobileAuth()` — currently
-      wide open. (Tracked on main-frame's own ADR-000 too; don't
-      duplicate the fix, just don't forget it from this side.)
+- [x] ~~main-frame: gate `/api/decks/:deckId/cards`, `/api/recordings`,
+      `/api/recordings/batch` behind `requireMobileAuth()`~~ — done
+      2026-08-30 on main-frame's side; `lib/learningApi.ts` updated in
+      the same session to send the bearer token. See Log. **Not yet
+      shipped to a device** — needs an `eas update` (JS-only) once
+      pushed, or Learning will start 401ing against a gated staging/
+      production deploy.
 - [ ] Implement ADR-001 (push notifications) once Poems' sharing is
       live end-to-end.
 - [ ] **Decide the shared build-trigger problem (Sketches) before it
@@ -259,3 +262,14 @@ once it firms up._
   concurrent work on this branch today (this Log entry's own merge being
   the third `git fetch` surprise), this time on the exact resource
   (`adr/ADR-000-living-document.md` itself) most likely to conflict.
+- 2026-08-30: main-frame gated `/api/decks/:deckId/cards`,
+  `/api/recordings`, and `/api/recordings/batch` behind
+  `requireMobileAuth()` (decided a while back, only just implemented —
+  see main-frame's own ADR-000 Log). `lib/learningApi.ts` updated in the
+  same session, before that landed, to send `Authorization: Bearer
+  <token>` via a new `authHeaders()` — same `getSession()`/
+  `NotLoggedInError` pattern `lib/server.ts`'s Poems calls already use,
+  so the two files handle "not logged in" identically now. Verified with
+  `tsc --noEmit` only (no Expo/device run) — not yet shipped to a
+  device, so Learning will 401 in the field until an `eas update` goes
+  out (see To-dos; this session has no EAS login to do that itself).

@@ -2,13 +2,23 @@
 // cards, and word recordings. Mirrors lib/server.ts's conventions — same
 // Settings-provided server URL, same "throw if not configured" shape.
 
+import { getSession } from './auth';
 import { readSettings } from './settings';
-import { ServerNotConfiguredError } from './server';
+import { NotLoggedInError, ServerNotConfiguredError } from './server';
 
 function getServerUrl(): string {
   const url = readSettings().serverUrl?.trim();
   if (!url) throw new ServerNotConfiguredError();
   return url.replace(/\/+$/, '');
+}
+
+// main-frame now gates these routes behind a mobile bearer token (see
+// its adr/ADR-000-living-document.md) — same session/token server.ts's
+// Poems calls already use.
+function authHeaders(): Record<string, string> {
+  const session = getSession();
+  if (!session) throw new NotLoggedInError();
+  return { Authorization: `Bearer ${session.token}` };
 }
 
 // main-frame's project has Vercel's own deployment protection on every
@@ -60,7 +70,7 @@ export async function fetchDeckCards(deckId: number, wordCount?: number): Promis
   const baseUrl = getServerUrl();
   const query = wordCount ? `?wordCount=${wordCount}` : '';
   const response = await fetch(`${baseUrl}/api/decks/${deckId}/cards${query}`, {
-    headers: protectionBypassHeaders(),
+    headers: { ...protectionBypassHeaders(), ...authHeaders() },
   });
   if (!response.ok) {
     throw new Error(`Fetching deck failed: server returned ${response.status}`);
@@ -75,7 +85,7 @@ export async function fetchRecordingsBatch(words: string[]): Promise<BatchRecord
   const baseUrl = getServerUrl();
   const response = await fetch(`${baseUrl}/api/recordings/batch`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...protectionBypassHeaders() },
+    headers: { 'Content-Type': 'application/json', ...protectionBypassHeaders(), ...authHeaders() },
     body: JSON.stringify({ words }),
   });
   if (!response.ok) {
@@ -92,7 +102,7 @@ export async function uploadRecording(
   const baseUrl = getServerUrl();
   const response = await fetch(`${baseUrl}/api/recordings`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...protectionBypassHeaders() },
+    headers: { 'Content-Type': 'application/json', ...protectionBypassHeaders(), ...authHeaders() },
     body: JSON.stringify({ word, audioBase64, recordedBy }),
   });
   if (!response.ok) {

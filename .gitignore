@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Claude Code worktrees (EnterWorktree/git worktree nests these under the repo itself)
+/.claude/worktrees/
