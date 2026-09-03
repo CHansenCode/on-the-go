@@ -105,6 +105,26 @@ that lives — a running backlog and sketchpad, not a decision record.
   file's own status line for what's verified vs. still open (no
   "list decks" endpoint, nothing writes to `decks_attempts` yet, routes
   not auth-gated).
+- **`main` now exists and is GitHub's default branch** (created
+  2026-08-31, from `6ce6lt`'s tip). Until then the repo had never had
+  one — GitHub's default was a `claude/…` dev branch. `android-app-review`
+  and `claude/android-app-chat-dev-6ce6lt` are now pure duplicates of
+  `main` (same commit); PR #1 (which had proposed merging `6ce6lt` into
+  `2l3rm8`) was closed as superseded, since its head was already `main`'s
+  tip. `2l3rm8` was checked once more for anything not yet reflected on
+  `main` — nothing was; its feature work stays superseded (see above)
+  and its process notes are already folded into this file. Left alone,
+  not deleted.
+- **Session workflow: branch administration is desktop-only.** Renaming
+  a branch, deleting one, or changing the default branch are repo-settings
+  operations that aren't reachable through the GitHub tools a mobile or
+  CLI session has (those only cover git-object-level ops: create a
+  branch/commit/PR, open/close/merge a PR) — discovered the hard way
+  getting `main` set up above. So: a session without GitHub-settings
+  access works toward a **draft PR against `main`**, not a branch it
+  expects to get renamed/repointed/deleted directly; a desktop session
+  (or the human, via GitHub's UI) handles the actual branch admin from
+  there.
 
 ## To-dos (backlog)
 
@@ -273,3 +293,16 @@ once it firms up._
   `tsc --noEmit` only (no Expo/device run) — not yet shipped to a
   device, so Learning will 401 in the field until an `eas update` goes
   out (see To-dos; this session has no EAS login to do that itself).
+- 2026-08-31: A separate (Claude Code, desktop) session noticed the repo
+  had no `main` branch at all — GitHub's default was
+  `claude/android-app-chat-dev-2l3rm8`, a shorter, older dev line.
+  Created `main` from `6ce6lt`'s tip (`e721a3d`, the same commit as
+  `android-app-review`) and the human set it as GitHub's default. PR #1
+  (`6ce6lt` → `2l3rm8`) closed as superseded — its head was already
+  `main`'s tip, nothing left to merge. Re-checked `2l3rm8` once more for
+  anything not yet folded into `main`: nothing was (see "Current context
+  snapshot" above). That session also had no way to rename or delete a
+  branch or change the repo's default branch — GitHub-settings actions,
+  out of reach of the git-object-level GitHub tools it had — which is
+  the origin of the "branch administration is desktop-only" convention
+  above.
