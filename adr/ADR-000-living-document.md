@@ -107,24 +107,20 @@ that lives — a running backlog and sketchpad, not a decision record.
   not auth-gated).
 - **`main` now exists and is GitHub's default branch** (created
   2026-08-31, from `6ce6lt`'s tip). Until then the repo had never had
-  one — GitHub's default was a `claude/…` dev branch. `android-app-review`
-  and `claude/android-app-chat-dev-6ce6lt` are now pure duplicates of
-  `main` (same commit); PR #1 (which had proposed merging `6ce6lt` into
-  `2l3rm8`) was closed as superseded, since its head was already `main`'s
-  tip. `2l3rm8` was checked once more for anything not yet reflected on
-  `main` — nothing was; its feature work stays superseded (see above)
-  and its process notes are already folded into this file. Left alone,
-  not deleted.
-- **Session workflow: branch administration is desktop-only.** Renaming
-  a branch, deleting one, or changing the default branch are repo-settings
-  operations that aren't reachable through the GitHub tools a mobile or
-  CLI session has (those only cover git-object-level ops: create a
-  branch/commit/PR, open/close/merge a PR) — discovered the hard way
-  getting `main` set up above. So: a session without GitHub-settings
-  access works toward a **draft PR against `main`**, not a branch it
-  expects to get renamed/repointed/deleted directly; a desktop session
-  (or the human, via GitHub's UI) handles the actual branch admin from
-  there.
+  one — GitHub's default was a `claude/…` dev branch. PR #1 (which had
+  proposed merging `6ce6lt` into `2l3rm8`) was closed as superseded,
+  since its head was already `main`'s tip. `2l3rm8` was checked once
+  more for anything not yet reflected on `main` — nothing was; its
+  feature work stays superseded (see above) and its process notes are
+  already folded into this file. Left alone, not deleted (only branch
+  kept around deliberately — see 2026-09-03 Log entry for why every
+  other one wasn't).
+- **Session workflow: branch administration is desktop-only.** Promoted
+  to **ADR-003** (`adr/ADR-003-mobile-desktop-branch-workflow.md`) —
+  see that file for the full decision. Short version: mobile branches
+  from `main`, names it `claude/<slug>`, works toward a draft PR against
+  `main`; desktop owns merging, deleting branches, and all other
+  repo-settings actions.
 
 ## To-dos (backlog)
 
@@ -306,3 +302,30 @@ once it firms up._
   out of reach of the git-object-level GitHub tools it had — which is
   the origin of the "branch administration is desktop-only" convention
   above.
+- 2026-09-03: A desktop session ran the first real branch cleanup under
+  that convention, plus fixed unrelated local corruption it found along
+  the way (not caused by this session — pre-existing as of Aug 31):
+  - **Local repo repair:** the checked-out `android-app-review` branch
+    had a 0-byte ref file (no commit, `HEAD` wouldn't resolve, `git
+    fetch` failed outright) and, separately, 35 of 41 tracked files were
+    0 bytes on disk even though git's index/objects still held real
+    content matching `main`. Both fixed — HEAD now on a proper local
+    `main` tracking `origin/main`, working tree restored from the index
+    (no data was actually lost; it was recoverable from git the whole
+    time).
+  - **Draft PR #2 (`claude/missing-main-branch-2nczun`) reviewed and
+    merged** — the 33-line ADR-000 addition that had recorded the
+    branch-admin convention above. Promoted that convention out of this
+    file into **ADR-003** (`adr/ADR-003-mobile-desktop-branch-workflow.md`)
+    and into `AGENTS.md` (so every session, mobile or desktop, actually
+    sees it), since it's now been exercised for real, not just sketched.
+  - **Branch cleanup:** deleted `claude/android-app-chat-dev-6ce6lt`
+    (remote + local; PR #1 already closed as superseded, identical to
+    `main`) and `android-app-review` (remote; pure duplicate of `main`,
+    no PR), removed the `.claude/worktrees/on-the-go-hotfixes` worktree
+    that had been checked out to `6ce6lt`, and deleted a stray
+    local-only `reconcile-6ce6lt` branch (unpushed, mislabeled — it
+    actually pointed at `2l3rm8`'s tip). `claude/android-app-chat-dev-2l3rm8`
+    left alone, per the existing decision to keep it for reference.
+  - Remaining branches: `main` (default) and `claude/android-app-chat-dev-2l3rm8`
+    (kept for reference) only.
